@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-code me-2"></i>{{ file_data.filename }}</h5>
+        <a href="{{ url_for('files.browse', subpath=parent) }}" class="btn btn-sm btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a la carpeta
+        </a>
+    </div>
+    <div class="card-body">
+        {% if file_data.type == 'text' %}
+            <pre class="bg-dark text-white p-3 rounded" style="max-height: 500px; overflow-y: auto;"><code>{{ file_data.content }}</code></pre>
+        {% else %}
+            <div class="alert alert-info">
+                El archivo es binario o no tiene codificación de texto plano legible.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
