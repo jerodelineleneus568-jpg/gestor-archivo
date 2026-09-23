@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
-from app.models.file_manager import FileManagerModel
+from app.models.file_manager import FileManagerModel, MAX_STORAGE_BYTES
 
 def create_file_blueprint(upload_folder: str):
     bp = Blueprint('files', __name__)
@@ -11,9 +11,12 @@ def create_file_blueprint(upload_folder: str):
         try:
             items = model.list_contents(subpath)
             parent = "/".join(subpath.rstrip("/").split("/")[:-1]) if subpath else None
-            return render_template('explorer.html', items=items, current_path=subpath, parent=parent)
+            used_mb = round(model.get_total_storage_used() / (1024 * 1024), 2)
+            max_mb = int(MAX_STORAGE_BYTES / (1024 * 1024))
+            storage_info = {"used_mb": used_mb, "max_mb": max_mb}
+            return render_template('explorer.html', items=items, current_path=subpath, parent=parent, storage_info=storage_info)
         except Exception as e:
-            flash(f"Error al listar: {str(e)}", "danger")
+            flash(f"Error: {str(e)}", "danger")
             return redirect(url_for('files.browse'))
 
     @bp.route('/upload', methods=['POST'])
@@ -25,9 +28,11 @@ def create_file_blueprint(upload_folder: str):
         else:
             try:
                 model.save_file(subpath, file)
-                flash("Archivo subido con éxito", "success")
+                flash("Archivo validado y subido con éxito", "success")
+            except (ValueError, OverflowError, PermissionError) as e:
+                flash(f"Seguridad: {str(e)}", "danger")
             except Exception as e:
-                flash(f"Error al subir: {str(e)}", "danger")
+                flash(f"Error inesperado: {str(e)}", "danger")
         return redirect(url_for('files.browse', subpath=subpath))
 
     @bp.route('/upload_folder', methods=['POST'])
@@ -42,7 +47,9 @@ def create_file_blueprint(upload_folder: str):
         try:
             for file, rel_path in zip(files, paths):
                 model.save_relative_file(subpath, rel_path, file)
-            return jsonify({"status": "success", "message": "Carpeta subida con éxito"})
+            return jsonify({"status": "success", "message": "Carpeta analizada y subida correctamente"})
+        except (ValueError, OverflowError, PermissionError) as e:
+            return jsonify({"status": "error", "message": str(e)}), 400
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 

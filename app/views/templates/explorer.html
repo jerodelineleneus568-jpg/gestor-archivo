@@ -1,11 +1,19 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<!-- Barra de estado de almacenamiento -->
+<div class="card mb-3 border-0 bg-white shadow-sm">
+    <div class="card-body py-2 d-flex justify-content-between align-items-center">
+        <small class="text-muted"><i class="bi bi-hdd-network me-1"></i> Espacio utilizado en servidor: <strong>{{ storage_info.used_mb }} MB</strong> / {{ storage_info.max_mb }} MB</small>
+        <span class="badge bg-secondary">Formatos seguros permitidos</span>
+    </div>
+</div>
+
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-4 border-end">
-                <h6><i class="bi bi-file-earmark-arrow-up me-1"></i> Subir Archivo</h6>
+                <h6><i class="bi bi-file-earmark-arrow-up me-1"></i> Subir Archivo (Máx 16MB)</h6>
                 <form action="{{ url_for('files.upload_file') }}" method="POST" enctype="multipart/form-data" class="d-flex flex-column gap-2">
                     <input type="hidden" name="subpath" value="{{ current_path }}">
                     <input class="form-control form-control-sm" type="file" name="file" required>
@@ -21,7 +29,7 @@
                         Subir Carpeta
                     </button>
                 </div>
-                <div id="uploadStatus" class="small text-muted mt-1" style="display:none;">Subiendo contenido...</div>
+                <div id="uploadStatus" class="small text-muted mt-1" style="display:none;">Subiendo contenido seguro...</div>
             </div>
 
             <div class="col-md-4">
@@ -110,13 +118,13 @@ function uploadFolderAction() {
         if (data.status === 'success') {
             window.location.reload();
         } else {
-            alert('Error: ' + data.message);
+            alert('Error de seguridad: ' + data.message);
             btn.disabled = false;
             status.style.display = 'none';
         }
     })
     .catch(err => {
-        alert('Error al subir: ' + err);
+        alert('Error en la subida: ' + err);
         btn.disabled = false;
         status.style.display = 'none';
     });
