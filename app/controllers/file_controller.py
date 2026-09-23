@@ -64,6 +64,16 @@ def create_file_blueprint(upload_folder: str):
             flash(f"Error al crear carpeta: {str(e)}", "danger")
         return redirect(url_for('files.browse', subpath=subpath))
 
+    @bp.route('/delete/<path:subpath>', methods=['POST'])
+    def delete_item(subpath):
+        parent = "/".join(subpath.rstrip("/").split("/")[:-1])
+        try:
+            model.delete_item(subpath)
+            flash("Elemento eliminado correctamente", "success")
+        except Exception as e:
+            flash(f"Error al eliminar: {str(e)}", "danger")
+        return redirect(url_for('files.browse', subpath=parent))
+
     @bp.route('/view/<path:subpath>', methods=['GET'])
     def view_file(subpath):
         try:

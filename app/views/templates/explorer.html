@@ -69,15 +69,22 @@
                         </a>
                     {% endif %}
                 </div>
-                <div>
+                <div class="d-flex align-items-center gap-2">
                     {% if not item.is_dir %}
                         <span class="badge bg-light text-secondary border">{{ (item.size / 1024)|round(1) }} KB</span>
-                        <a href="{{ url_for('files.view_file', subpath=item.rel_path) }}" class="btn btn-sm btn-outline-primary ms-2">
+                        <a href="{{ url_for('files.view_file', subpath=item.rel_path) }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye"></i> Ver
                         </a>
                     {% else %}
-                        <span class="badge bg-light text-secondary">Carpeta</span>
+                        <span class="badge bg-light text-secondary border">Carpeta</span>
                     {% endif %}
+
+                    <!-- Formulario de eliminación -->
+                    <form action="{{ url_for('files.delete_item', subpath=item.rel_path) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar {{ item.name }}?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         {% else %}

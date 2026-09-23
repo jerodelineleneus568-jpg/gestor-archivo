@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from werkzeug.utils import secure_filename
 
@@ -8,7 +9,7 @@ ALLOWED_EXTENSIONS = {
     'py', 'html', 'css', 'js', 'md', 'doc', 'docx', 'xls', 'xlsx'
 }
 
-# Límite global de almacenamiento permitido en uploads (ej. 500 MB)
+# Límite global de almacenamiento permitido en uploads (500 MB)
 MAX_STORAGE_BYTES = 500 * 1024 * 1024 
 
 class FileManagerModel:
@@ -89,6 +90,20 @@ class FileManagerModel:
             
         file_dest = target_dir / filename
         file_storage.save(file_dest)
+
+    def delete_item(self, subpath: str):
+        """Elimina un archivo o una carpeta con todo su contenido."""
+        if not subpath:
+            raise ValueError("No se puede eliminar la carpeta raíz.")
+        
+        target_path = self._get_safe_path(subpath)
+        if not target_path.exists():
+            raise FileNotFoundError("El elemento que intenta eliminar no existe.")
+
+        if target_path.is_dir():
+            shutil.rmtree(target_path)
+        else:
+            target_path.unlink()
 
     def read_file(self, subpath: str):
         target_path = self._get_safe_path(subpath)
