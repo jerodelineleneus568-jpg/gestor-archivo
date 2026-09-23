@@ -1,3 +1,4 @@
+cat << 'EOF' > app/controllers/file_controller.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from app.models.file_manager import FileManagerModel, MAX_STORAGE_BYTES
 
@@ -30,7 +31,7 @@ def create_file_blueprint(upload_folder: str):
                 model.save_file(subpath, file)
                 flash("Archivo validado y subido con éxito", "success")
             except (ValueError, OverflowError, PermissionError) as e:
-                flash(f"Seguridad: {str(e)}", "danger")
+                flash(str(e), "danger")
             except Exception as e:
                 flash(f"Error inesperado: {str(e)}", "danger")
         return redirect(url_for('files.browse', subpath=subpath))
@@ -85,3 +86,4 @@ def create_file_blueprint(upload_folder: str):
             return redirect(url_for('files.browse'))
 
     return bp
+EOF

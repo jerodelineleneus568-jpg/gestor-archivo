@@ -2,15 +2,25 @@ import os
 import shutil
 from pathlib import Path
 from werkzeug.utils import secure_filename
+import magic
 
-# Lista blanca de extensiones permitidas
 ALLOWED_EXTENSIONS = {
     'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'csv', 'json',
     'py', 'html', 'css', 'js', 'md', 'doc', 'docx', 'xls', 'xlsx'
 }
 
-# Límite global de almacenamiento permitido en uploads (500 MB)
-MAX_STORAGE_BYTES = 500 * 1024 * 1024 
+BLOCKED_MIMETYPES = {
+    'application/x-dosexec',
+    'application/x-executable',
+    'application/x-sharedlib',
+    'application/x-msdos-program',
+    'application/x-sh',
+    'text/x-shellscript',
+    'application/x-bat',
+    'application/x-msdownload'
+}
+
+MAX_STORAGE_BYTES = 500 * 1024 * 1024
 
 class FileManagerModel:
     def __init__(self, base_dir: str):
@@ -24,7 +34,6 @@ class FileManagerModel:
         return target_path
 
     def get_total_storage_used(self) -> int:
-        """Calcula el peso total acumulado en la carpeta uploads."""
         total = 0
         for entry in self.base_dir.rglob('*'):
             if entry.is_file():
@@ -32,11 +41,37 @@ class FileManagerModel:
         return total
 
     def is_allowed_file(self, filename: str) -> bool:
-        """Verifica si la extensión del archivo está en la lista blanca."""
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+    def validate_file_content(self, file_storage, filename: str):
+        header = file_storage.read(2048)
+        file_storage.seek(0)
+
+        # Si detecta cabecera ejecutable PE (.exe)
+        if header.startswith(b'MZ'):
+            raise ValueError("No se pudo")
+
+        # Si detecta script linux (#!) que no sea python
+        if header.startswith(b'#!'):
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            if ext not in {'py'}:
+                raise ValueError("Falsificación detectada")
+
+        try:
+            mime = magic.from_buffer(header, mime=True)
+        except Exception:
+            mime = 'application/octet-stream'
+
+        if mime in BLOCKED_MIMETYPES:
+            raise ValueError("Falsificación detectada")
+
+        # Verificación de imagen real
+        ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        if ext in {'png', 'jpg', 'jpeg', 'gif'}:
+            if not mime.startswith('image/'):
+                raise ValueError("No se pudo cargar")
+
     def check_storage_quota(self, incoming_size: int = 0):
-        """Verifica si queda espacio en el servidor antes de guardar."""
         current_used = self.get_total_storage_used()
         if current_used + incoming_size > MAX_STORAGE_BYTES:
             max_mb = MAX_STORAGE_BYTES / (1024 * 1024)
@@ -68,6 +103,7 @@ class FileManagerModel:
         if not self.is_allowed_file(filename):
             raise ValueError(f"Extensión no permitida para el archivo '{filename}'.")
 
+        self.validate_file_content(file_storage, filename)
         self.check_storage_quota()
         target_path = self._get_safe_path(subpath) / filename
         file_storage.save(target_path)
@@ -79,8 +115,9 @@ class FileManagerModel:
         
         filename = parts[-1]
         if not self.is_allowed_file(filename):
-            raise ValueError(f"El archivo '{filename}' tiene una extensión no permitida y fue rechazado.")
+            raise ValueError(f"El archivo '{filename}' tiene una extensión no permitida.")
 
+        self.validate_file_content(file_storage, filename)
         self.check_storage_quota()
 
         target_dir = self._get_safe_path(subpath)
@@ -92,10 +129,8 @@ class FileManagerModel:
         file_storage.save(file_dest)
 
     def delete_item(self, subpath: str):
-        """Elimina un archivo o una carpeta con todo su contenido."""
         if not subpath:
             raise ValueError("No se puede eliminar la carpeta raíz.")
-        
         target_path = self._get_safe_path(subpath)
         if not target_path.exists():
             raise FileNotFoundError("El elemento que intenta eliminar no existe.")
@@ -109,7 +144,6 @@ class FileManagerModel:
         target_path = self._get_safe_path(subpath)
         if not target_path.is_file():
             raise FileNotFoundError("El archivo no existe")
-        
         try:
             with open(target_path, 'r', encoding='utf-8') as f:
                 content = f.read()
