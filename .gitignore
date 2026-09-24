@@ -1,0 +1,22 @@
+# Entornos virtuales
+venv/
+env/
+.env
+
+# Claves y certificados SSL (No subirlos por seguridad)
+*.pem
+*.key
+*.crt
+
+# Archivos compilados y temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de subida de pruebas
+uploads/*
+!uploads/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
